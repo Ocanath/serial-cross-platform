@@ -1,28 +1,50 @@
 #include "serial.h"
 #include <stdio.h>
+/*
+Generic 2's complement hex checksum calculation.
+Used in the psyonic API
+*/
+uint8_t get_checksum(uint8_t* arr, int size)
+{
 
-int main() {
+    int8_t checksum = 0;
+    for (int i = 0; i < size; i++)
+        checksum += (int8_t)arr[i];
+    return -checksum;
+}
+
+int main()
+{
     // Create a Serial object
     Serial serial;
     
     // Auto-connect to the first available serial port
-    if (serial.autoconnect(115200)) {
-        printf("Successfully connected to serial port!\n");
-        
+    //if (serial.autoconnect(460800)) 
+    if(serial.connect("COM5",460800))
+    {
+                
         // Example: Send some data
-        uint8_t data[] = {0x01, 0x02, 0x03, 0x04};
-        int bytes_written = serial.write(data, 4);
+        uint8_t data[7] = {'`~', 0x50, 0x77, 'R', 'c', 0x0, '~'};
+        data[5] = get_checksum(&data[1], 4);
+        int bytes_written = serial.write(data, 7);
         printf("Wrote %d bytes\n", bytes_written);
-        
-        // Example: Read some data
-        uint8_t buffer[256];
-        int bytes_read = serial.read(buffer, 256);
-        if (bytes_read > 0) {
-            printf("Read %d bytes\n", bytes_read);
+
+        uint8_t buffer[256] = {};
+        int bytes_read = 0;
+        while(bytes_read == 0)
+        {
+        // Example: Read some 
+            bytes_read = serial.read(buffer, 256);
         }
-        
+        if (bytes_read > 0) 
+        {
+            printf("Read %d bytes: %s\n", bytes_read, buffer);
+        }
+
         // The destructor will automatically close the connection
-    } else {
+    } 
+    else 
+    {
         printf("Failed to connect to any serial port\n");
     }
     
