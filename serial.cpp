@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#include <chrono>
+// #include <thread>
 
 #ifdef _WIN32
 #include <errno.h>
@@ -111,16 +113,16 @@ int Serial::write(uint8_t* data, int size)
 #endif
 }
 
-int Serial::read(uint8_t* buffer, int buffer_size) 
+int Serial::read(uint8_t* buffer, int buffer_size)
 {
-    if (!is_connected) 
+    if (!is_connected)
     {
         return -1;
     }
 
 #ifdef _WIN32
     DWORD bytes_read = 0;
-    if (ReadFile(serial_handle, buffer, buffer_size, &bytes_read, NULL)) 
+    if (ReadFile(serial_handle, buffer, buffer_size, &bytes_read, NULL))
     {
         return (int)bytes_read;
     }
@@ -128,6 +130,63 @@ int Serial::read(uint8_t* buffer, int buffer_size)
 #else
     return ::read(serial_fd, buffer, buffer_size);
 #endif
+}
+
+int Serial::read_until_delimiter(uint8_t* buffer, int buffer_size, uint8_t delimiter, int timeout_ms)
+{
+    if (!is_connected)
+    {
+        return -1;
+    }
+
+    if (buffer_size <= 0)
+    {
+        return -1;
+    }
+
+    auto start_time = std::chrono::steady_clock::now();
+    int total_bytes_read = 0;
+
+    while (total_bytes_read < buffer_size - 1)
+    {
+        // Check timeout
+        auto current_time = std::chrono::steady_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
+
+        if (elapsed_ms >= timeout_ms)
+        {
+            break;
+        }
+
+        // Try to read one byte
+        uint8_t temp_byte;
+        int bytes_read = read(&temp_byte, 1);
+
+        if (bytes_read > 0)
+        {
+            buffer[total_bytes_read] = temp_byte;
+            total_bytes_read++;
+
+            // Check if we found the delimiter
+            if (temp_byte == delimiter)
+            {
+                break;
+            }
+        }
+        else
+        {
+            // No data available, sleep briefly to avoid busy waiting
+            // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+
+    // Null-terminate the buffer
+    if (total_bytes_read < buffer_size)
+    {
+        buffer[total_bytes_read] = 0;
+    }
+
+    return total_bytes_read;
 }
 
 bool Serial::connected() 

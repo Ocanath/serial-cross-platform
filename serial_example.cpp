@@ -33,12 +33,29 @@ int main()
         int bytes_read = 0;
         while(bytes_read == 0)
         {
-        // Example: Read some 
+        // Example: Read some
             bytes_read = serial.read(buffer, 256);
         }
-        if (bytes_read > 0) 
+        if (bytes_read > 0)
         {
             printf("Read %d bytes: %s\n", bytes_read, buffer);
+        }
+
+        // Example: Read until NULL delimiter with 5 second timeout
+        uint8_t delimiter_buffer[256] = {};
+        int delimiter_bytes = serial.read_until_delimiter(delimiter_buffer, 256, 0x00, 5000);
+        if (delimiter_bytes > 0)
+        {
+            printf("Read %d bytes until NULL delimiter: ", delimiter_bytes);
+            for (int i = 0; i < delimiter_bytes; i++)
+            {
+                printf("%02X ", delimiter_buffer[i]);
+            }
+            printf("\n");
+        }
+        else
+        {
+            printf("Timeout or no data received\n");
         }
 
         // The destructor will automatically close the connection
