@@ -147,7 +147,7 @@ int Serial::read_until_delimiter(uint8_t* buffer, int buffer_size, uint8_t delim
     auto start_time = std::chrono::steady_clock::now();
     int total_bytes_read = 0;
 
-    while (total_bytes_read < buffer_size - 1)
+    while (total_bytes_read < buffer_size)
     {
         // Check timeout
         auto current_time = std::chrono::steady_clock::now();
@@ -158,33 +158,28 @@ int Serial::read_until_delimiter(uint8_t* buffer, int buffer_size, uint8_t delim
             break;
         }
 
-        // Try to read one byte
-        uint8_t temp_byte;
-        int bytes_read = read(&temp_byte, 1);
+        // Try to read all remaining buffer space
+        int remaining_space = buffer_size - total_bytes_read;
+
+        int bytes_read = read(&buffer[total_bytes_read], remaining_space);
 
         if (bytes_read > 0)
         {
-            buffer[total_bytes_read] = temp_byte;
-            total_bytes_read++;
-
-            // Check if we found the delimiter
-            if (temp_byte == delimiter)
+            // Check for delimiter in the newly read data
+            for (int i = 0; i < bytes_read; i++)
             {
-                break;
+                if (buffer[total_bytes_read + i] == delimiter)
+                {
+                    // Found delimiter, return up to and including the delimiter
+                    total_bytes_read += i + 1;
+                    return total_bytes_read;
+                }
             }
-        }
-        else
-        {
-            // No data available, sleep briefly to avoid busy waiting
-            // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            total_bytes_read += bytes_read;
         }
     }
 
-    // Null-terminate the buffer
-    if (total_bytes_read < buffer_size)
-    {
-        buffer[total_bytes_read] = 0;
-    }
+
 
     return total_bytes_read;
 }
