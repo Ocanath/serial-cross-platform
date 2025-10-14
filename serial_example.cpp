@@ -24,7 +24,7 @@ int main()
     {
                 
         // Example: Send some data
-        uint8_t data[7] = {'`~', 0x50, 0x77, 'R', 'c', 0x0, '~'};
+        uint8_t data[7] = {'~', 0x50, 0x77, 'R', 'c', 0x0, '~'};
         data[5] = get_checksum(&data[1], 4);
         int bytes_written = serial.write(data, 7);
         printf("Wrote %d bytes\n", bytes_written);
