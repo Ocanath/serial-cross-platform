@@ -155,7 +155,7 @@ int Serial::read_until_delimiter(uint8_t* buffer, int buffer_size, uint8_t delim
 
         if (elapsed_ms >= timeout_ms)
         {
-            break;
+			return -2;	//timeout
         }
 
         // Try to read all remaining buffer space
@@ -180,6 +180,65 @@ int Serial::read_until_delimiter(uint8_t* buffer, int buffer_size, uint8_t delim
     }
 
 
+
+    return total_bytes_read;
+}
+
+int Serial::read_dual_delimiter(uint8_t* buffer, int buffer_size, uint8_t delimiter, int timeout_ms)
+{
+    if (!is_connected)
+    {
+        return -1;
+    }
+
+    if (buffer_size <= 0)
+    {
+        return -1;
+    }
+
+    auto start_time = std::chrono::steady_clock::now();
+    int total_bytes_read = 0;
+    bool found_first_delimiter = false;
+
+    while (total_bytes_read < buffer_size)
+    {
+        // Check timeout
+        auto current_time = std::chrono::steady_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
+
+        if (elapsed_ms >= timeout_ms)
+        {
+            return -2;	//timeout
+        }
+
+        // Try to read all remaining buffer space
+        int remaining_space = buffer_size - total_bytes_read;
+
+        int bytes_read = read(&buffer[total_bytes_read], remaining_space);
+
+        if (bytes_read > 0)
+        {
+            // Check for delimiters in the newly read data
+            for (int i = 0; i < bytes_read; i++)
+            {
+                if (buffer[total_bytes_read + i] == delimiter)
+                {
+                    if (!found_first_delimiter)
+                    {
+                        // Found first delimiter, keep reading
+                        found_first_delimiter = true;
+                    }
+                    else
+                    {
+                        // Found second delimiter, return complete frame including both delimiters
+                        total_bytes_read += i + 1;
+                        return total_bytes_read;
+                    }
+                }
+            }
+            total_bytes_read += bytes_read;
+        }
+    }
 
     return total_bytes_read;
 }
