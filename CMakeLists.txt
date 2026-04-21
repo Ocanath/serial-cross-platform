@@ -23,6 +23,11 @@ set(SERIAL_HEADERS
     serial.h
 )
 
+# byte-stuffing dependency (bytestream target)
+if(NOT TARGET bytestream)
+    add_subdirectory(external/byte-stuffing)
+endif()
+
 # Create the serial library
 add_library(serial STATIC ${SERIAL_SOURCES} ${SERIAL_HEADERS})
 
@@ -49,6 +54,8 @@ elseif(PLATFORM_MACOS)
     # macOS uses the same termios interface as Linux
     target_link_libraries(serial pthread)
 endif()
+
+target_link_libraries(serial PUBLIC bytestream)
 
 # Include directories
 target_include_directories(serial

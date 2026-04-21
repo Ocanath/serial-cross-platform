@@ -1,4 +1,5 @@
 #include "serial.h"
+#include "bytestream.h"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
