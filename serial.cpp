@@ -16,6 +16,8 @@
 #include <sys/ioctl.h>
 #endif
 
+#define READ_CHUNK_SIZE 128
+
 Serial::Serial() 
 {
     is_connected = false;
@@ -185,7 +187,8 @@ int Serial::read_until_delimiter(uint8_t* buffer, int buffer_size, uint8_t delim
     return total_bytes_read;
 }
 
-int Serial::read_dual_delimiter(uint8_t* buffer, int buffer_size, uint8_t delimiter, int timeout_ms)
+
+int Serial::read_dual_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t delimiter, int timeout_ms)
 {
     if (!is_connected)
     {
@@ -196,12 +199,12 @@ int Serial::read_dual_delimiter(uint8_t* buffer, int buffer_size, uint8_t delimi
     {
         return -1;
     }
+	bytestream_buf_t stream = {buffer, buffer_size, 0, 0};	//init stream container
 
     auto start_time = std::chrono::steady_clock::now();
-    int total_bytes_read = 0;
-    bool found_first_delimiter = false;
-
-    while (total_bytes_read < buffer_size)
+	
+	uint8_t read_buf[READ_CHUNK_SIZE];
+    while (1)
     {
         // Check timeout
         auto current_time = std::chrono::steady_clock::now();
@@ -212,36 +215,18 @@ int Serial::read_dual_delimiter(uint8_t* buffer, int buffer_size, uint8_t delimi
             return -2;	//timeout
         }
 
-        // Try to read all remaining buffer space
-        int remaining_space = buffer_size - total_bytes_read;
+        int bytes_read = read(read_buf, sizeof(read_buf));	//drain the kernel buffer into the read_buf stack buffer. 
 
-        int bytes_read = read(&buffer[total_bytes_read], remaining_space);
-
-        if (bytes_read > 0)
-        {
-            // Check for delimiters in the newly read data
-            for (int i = 0; i < bytes_read; i++)
-            {
-                if (buffer[total_bytes_read + i] == delimiter)
-                {
-                    if (!found_first_delimiter)
-                    {
-                        // Found first delimiter, keep reading
-                        found_first_delimiter = true;
-                    }
-                    else
-                    {
-                        // Found second delimiter, return complete frame including both delimiters
-                        total_bytes_read += i + 1;
-                        return total_bytes_read;
-                    }
-                }
-            }
-            total_bytes_read += bytes_read;
-        }
+		// Check for delimiters in the newly read data
+		for (int i = 0; i < bytes_read; i++)
+		{
+			int rc = bytestream_dual_delimiter(read_buf[i], &stream, delimiter);
+			if(rc == BYTESTREAM_SUCCESS)	//contract is clear. If the function returns success, len is valid. Otherwise it is stale.
+			{
+				return stream.len;
+			}
+		}
     }
-
-    return total_bytes_read;
 }
 
 bool Serial::connected() 
