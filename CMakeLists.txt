@@ -46,16 +46,14 @@ if(PLATFORM_WINDOWS)
 elseif(PLATFORM_LINUX)
     # Linux-specific settings
     target_compile_definitions(serial PRIVATE __linux__)
-    # Link against required libraries for Linux serial communication
-    target_link_libraries(serial pthread)
+    target_link_libraries(serial PRIVATE pthread)
 elseif(PLATFORM_MACOS)
     # macOS-specific settings
     target_compile_definitions(serial PRIVATE __APPLE__)
-    # macOS uses the same termios interface as Linux
-    target_link_libraries(serial pthread)
+    target_link_libraries(serial PRIVATE pthread)
 endif()
 
-target_link_libraries(serial PUBLIC bytestream)
+target_link_libraries(serial PRIVATE bytestream)
 
 # Include directories
 target_include_directories(serial
@@ -73,53 +71,12 @@ else()
     target_compile_options(serial PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-# Create example executable
-add_executable(serial_example serial_example.cpp)
-target_link_libraries(serial_example serial)
+option(SERIAL_BUILD_EXAMPLES "Build serial example executable" OFF)
+if(SERIAL_BUILD_EXAMPLES)
+    add_executable(serial_example serial_example.cpp)
+    target_link_libraries(serial_example serial)
+endif()
 
-# Installation configuration
-include(GNUInstallDirs)
-
-# Install the library
-install(TARGETS serial
-    EXPORT SerialLibraryTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/serial
-)
-
-# Install headers
-install(FILES ${SERIAL_HEADERS}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/serial
-)
-
-# Export targets
-install(EXPORT SerialLibraryTargets
-    FILE SerialLibraryTargets.cmake
-    NAMESPACE SerialLibrary::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SerialLibrary
-)
-
-# Create and install config file
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-    SerialLibraryConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/SerialLibraryConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/SerialLibraryConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SerialLibrary
-)
-
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/SerialLibraryConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/SerialLibraryConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SerialLibrary
-)
 
 # Testing (optional)
 option(BUILD_TESTING "Build the testing tree." OFF)
