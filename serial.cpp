@@ -141,11 +141,6 @@ int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t de
     {
         return -1;
     }
-
-    if (buffer_size <= 0)
-    {
-        return -1;
-    }
 	bytestream_buf_t stream = {buffer, buffer_size, 0, 0};	//init stream container
 
     auto start_time = std::chrono::steady_clock::now();
@@ -163,6 +158,10 @@ int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t de
         }
 
         int bytes_read = read(read_buf, sizeof(read_buf));	//drain the kernel buffer into the read_buf stack buffer. 
+		if(bytes_read < 0)
+		{
+			return -3;
+		}
 
 		// Check for delimiters in the newly read data
 		for (int i = 0; i < bytes_read; i++)
@@ -184,12 +183,7 @@ int Serial::read_dual_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t del
         return -1;
     }
 
-    if (buffer_size <= 0)
-    {
-        return -1;
-    }
 	bytestream_buf_t stream = {buffer, buffer_size, 0, 0};	//init stream container
-
     auto start_time = std::chrono::steady_clock::now();
 	
 	uint8_t read_buf[READ_CHUNK_SIZE];
@@ -205,7 +199,10 @@ int Serial::read_dual_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t del
         }
 
         int bytes_read = read(read_buf, sizeof(read_buf));	//drain the kernel buffer into the read_buf stack buffer. 
-
+		if(bytes_read < 0)
+		{
+			return -3;
+		}
 		// Check for delimiters in the newly read data
 		for (int i = 0; i < bytes_read; i++)
 		{
@@ -213,6 +210,10 @@ int Serial::read_dual_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t del
 			if(rc == BYTESTREAM_SUCCESS)	//contract is clear. If the function returns success, len is valid. Otherwise it is stale.
 			{
 				return stream.len;
+			}
+			else if(rc != BYTESTREAM_IN_PROGRESS)
+			{
+				return rc;
 			}
 		}
     }
