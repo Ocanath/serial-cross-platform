@@ -34,9 +34,9 @@ Serial::~Serial()
     disconnect();
 }
 
-bool Serial::autoconnect(unsigned long baud_rate) 
+bool Serial::autoconnect(unsigned long baudrate) 
 {
-    this->baud_rate = baud_rate;
+    this->baud_rate = baudrate;
     
 #ifdef _WIN32
     // Windows: Try COM1 through COM255
@@ -70,9 +70,9 @@ bool Serial::autoconnect(unsigned long baud_rate)
     return false;
 }
 
-bool Serial::connect(const char* port_name, unsigned long baud_rate) 
+bool Serial::connect(const char* port_name, unsigned long baudrate) 
 {
-    this->baud_rate = baud_rate;
+    this->baud_rate = baudrate;
     return connect_to_port(port_name);
 }
 
@@ -141,7 +141,7 @@ int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t de
     {
         return -1;
     }
-	bytestream_buf_t stream = {buffer, buffer_size, 0, 0};	//init stream container
+	bytestream_t stream = {buffer, buffer_size, 0, 0};	//init stream container
 
     auto start_time = std::chrono::steady_clock::now();
 	
@@ -169,51 +169,7 @@ int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t de
 			int rc = bytestream(read_buf[i], &stream, delimiter);
 			if(rc == BYTESTREAM_SUCCESS)	//contract is clear. If the function returns success, len is valid. Otherwise it is stale.
 			{
-				return stream.len;
-			}
-		}
-    }
-}
-
-
-int Serial::read_dual_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t delimiter, int timeout_ms)
-{
-    if (!is_connected)
-    {
-        return -1;
-    }
-
-	bytestream_buf_t stream = {buffer, buffer_size, 0, 0};	//init stream container
-    auto start_time = std::chrono::steady_clock::now();
-	
-	uint8_t read_buf[READ_CHUNK_SIZE];
-    while (1)
-    {
-        // Check timeout
-        auto current_time = std::chrono::steady_clock::now();
-        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
-
-        if (elapsed_ms >= timeout_ms)
-        {
-            return -2;	//timeout
-        }
-
-        int bytes_read = read(read_buf, sizeof(read_buf));	//drain the kernel buffer into the read_buf stack buffer. 
-		if(bytes_read < 0)
-		{
-			return -3;
-		}
-		// Check for delimiters in the newly read data
-		for (int i = 0; i < bytes_read; i++)
-		{
-			int rc = bytestream_dual_delimiter(read_buf[i], &stream, delimiter);
-			if(rc == BYTESTREAM_SUCCESS)	//contract is clear. If the function returns success, len is valid. Otherwise it is stale.
-			{
-				return stream.len;
-			}
-			else if(rc != BYTESTREAM_IN_PROGRESS)
-			{
-				return rc;
+				return (int)(stream.len);
 			}
 		}
     }
@@ -266,7 +222,7 @@ void Serial::configure_port()
     serial_params.BaudRate = baud_rate;
     serial_params.ByteSize = DATABITS_8;
     serial_params.StopBits = ONESTOPBIT;
-    serial_params.Parity = PARITY_NONE;
+    serial_params.Parity = NOPARITY;
     
     if (SetCommState(serial_handle, &serial_params)) 
     {

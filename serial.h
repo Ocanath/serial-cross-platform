@@ -29,14 +29,13 @@ public:
     ~Serial();
     
     // Main interface methods
-    bool autoconnect(unsigned long baud_rate);
-    bool connect(const char* port_name, unsigned long baud_rate);
+    bool autoconnect(unsigned long baudrate);
+    bool connect(const char* port_name, unsigned long baudrate);
     void disconnect();
     
     // Read/Write methods
     int write(uint8_t* data, int size);
     int read(uint8_t* buffer, int buffer_size);
-	int read_dual_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t delimiter, int timeout_ms);
     int read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t delimiter, int timeout_ms);
     
     // Status methods
