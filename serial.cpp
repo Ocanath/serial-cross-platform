@@ -220,7 +220,7 @@ void Serial::configure_port()
     DCB serial_params = { 0 };
     serial_params.DCBlength = sizeof(serial_params);
     serial_params.BaudRate = baud_rate;
-    serial_params.ByteSize = DATABITS_8;
+    serial_params.ByteSize = 8;
     serial_params.StopBits = ONESTOPBIT;
     serial_params.Parity = NOPARITY;
     
