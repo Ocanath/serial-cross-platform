@@ -14,7 +14,17 @@ class Serial
 {
 
 public:
-    Serial();
+
+	enum {
+		ERROR_DISCONNECTED = -1,
+		ERROR_READ_TIMEOUT = -2,
+		ERROR_READ_FAILURE = -3,
+		ERROR_UNREGISTERED_CALLBACK = -4,
+		ERROR_INVALID_INPUT = -5
+	};
+
+
+	Serial();
     ~Serial();
 
 	typedef bool (*frame_cb_t)(bytestream_t * periph, void* user_context);
@@ -46,13 +56,6 @@ private:
     int serial_fd;
 #endif
 
-	enum {
-		ERROR_DISCONNECTED = -1,
-		ERROR_READ_TIMEOUT = -2,
-		ERROR_READ_FAILURE = -3,
-		ERROR_UNREGISTERED_CALLBACK = -4,
-		ERROR_INVALID_INPUT = -5
-	};
 
     bool is_connected;
     unsigned long baud_rate;
