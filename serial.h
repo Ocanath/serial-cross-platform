@@ -17,6 +17,14 @@ private:
 #else
     int serial_fd;
 #endif
+
+	enum {
+		ERROR_DISCONNECTED = -1,
+		ERROR_READ_TIMEOUT = -2,
+		ERROR_READ_FAILURE = -3,
+		ERROR_UNREGISTERED_CALLBACK = -4
+	};
+
     bool is_connected;
     unsigned long baud_rate;
 

@@ -101,7 +101,7 @@ int Serial::write(uint8_t* data, int size)
 {
     if (!is_connected) 
     {
-        return -1;
+        return ERROR_DISCONNECTED;
     }
 
 #ifdef _WIN32
@@ -110,7 +110,7 @@ int Serial::write(uint8_t* data, int size)
     {
         return (int)bytes_written;
     }
-    return -1;
+    return ERROR_DISCONNECTED;
 #else
     return ::write(serial_fd, data, size);
 #endif
@@ -120,7 +120,7 @@ int Serial::read(uint8_t* buffer, int buffer_size)
 {
     if (!is_connected)
     {
-        return -1;
+        return ERROR_DISCONNECTED;
     }
 
 #ifdef _WIN32
@@ -129,7 +129,7 @@ int Serial::read(uint8_t* buffer, int buffer_size)
     {
         return (int)bytes_read;
     }
-    return -1;
+    return ERROR_DISCONNECTED;
 #else
     return ::read(serial_fd, buffer, buffer_size);
 #endif
@@ -139,7 +139,7 @@ int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t de
 {
    if (!is_connected)
     {
-        return -1;
+        return ERROR_DISCONNECTED;
     }
 	bytestream_t stream = {buffer, buffer_size, 0, 0};	//init stream container
 
@@ -154,13 +154,13 @@ int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t de
 
         if (elapsed_ms >= timeout_ms)
         {
-            return -2;	//timeout
+            return ERROR_READ_TIMEOUT;	//timeout
         }
 
         int bytes_read = read(read_buf, sizeof(read_buf));	//drain the kernel buffer into the read_buf stack buffer. 
 		if(bytes_read < 0)
 		{
-			return -3;
+			return ERROR_READ_FAILURE;
 		}
 
 		// Check for delimiters in the newly read data
