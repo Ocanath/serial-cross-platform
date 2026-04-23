@@ -1,5 +1,4 @@
 #include "serial.h"
-#include "bytestream.h"
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
@@ -22,6 +21,9 @@ Serial::Serial()
 {
     is_connected = false;
     baud_rate = 115200;
+	_user_context = NULL;
+	_frame_found_callback = NULL;
+
 #ifdef _WIN32
     serial_handle = INVALID_HANDLE_VALUE;
 #else
@@ -116,9 +118,25 @@ int Serial::write(uint8_t* data, int size)
 #endif
 }
 
+/** @brief Basic callback registration
+ * @param cb, pointer to the callback function, must be: bool callback(bytestream_t* periph, void * user_context);
+ * @param user_context optional context pointer which is passed to the callback when it is called.
+ *
+ */
+int Serial::register_callback(frame_cb_t cb, void*user_context)
+{
+	if(cb == NULL)
+	{
+		return ERROR_INVALID_INPUT;
+	}
+	_user_context = user_context;
+	_frame_found_callback = cb;
+	return 0;
+}
+
 int Serial::read(uint8_t* buffer, int buffer_size)
 {
-    if (!is_connected)
+	if (!is_connected)
     {
         return ERROR_DISCONNECTED;
     }
@@ -135,9 +153,55 @@ int Serial::read(uint8_t* buffer, int buffer_size)
 #endif
 }
 
-int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, uint8_t delimiter, int timeout_ms)
+int Serial::read_until_valid(unsigned char * buffer, size_t buffer_size, unsigned char delimiter, int timeout_ms)
 {
-   if (!is_connected)
+	if (!is_connected)
+    {
+        return ERROR_DISCONNECTED;
+    }
+	if(_frame_found_callback == NULL)
+	{
+		return ERROR_UNREGISTERED_CALLBACK;
+	}
+	bytestream_t stream = {buffer, buffer_size, 0, 0};	//init stream container
+
+    auto start_time = std::chrono::steady_clock::now();
+
+	uint8_t read_buf[READ_CHUNK_SIZE];
+	while(1)
+	{
+		auto current_time = std::chrono::steady_clock::now();
+        auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
+
+        if (elapsed_ms >= timeout_ms)
+        {
+            return ERROR_READ_TIMEOUT;	//timeout
+        }
+        int bytes_read = read(read_buf, sizeof(read_buf));	//drain the kernel buffer into the read_buf stack buffer.
+		if(bytes_read < 0)
+		{
+			return ERROR_READ_FAILURE;
+		}
+
+		// Check for delimiters in the newly read data
+		for (int i = 0; i < bytes_read; i++)
+		{
+			int rc = bytestream(read_buf[i], &stream, delimiter);
+			if(rc == BYTESTREAM_SUCCESS)	//contract is clear. If the function returns success, len is valid. Otherwise it is stale.
+			{
+				bool valid = _frame_found_callback(&stream, _user_context);
+				if(valid)
+				{
+					return (int)stream.len;	//the check valid callback is responsible for extracting the decoded length and checking it on its end
+				}
+			}
+		}
+	}
+}
+
+int Serial::read_until_delimiter(uint8_t* buffer, size_t buffer_size, unsigned char delimiter, int timeout_ms)
+{
+	if (!is_connected)
     {
         return ERROR_DISCONNECTED;
     }
