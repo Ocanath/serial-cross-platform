@@ -83,8 +83,9 @@ void Serial::disconnect()
     if (is_connected) 
     {
 #ifdef _WIN32
-        if (serial_handle != INVALID_HANDLE_VALUE) 
+        if (serial_handle != INVALID_HANDLE_VALUE)
         {
+            FlushFileBuffers(serial_handle);
             CloseHandle(serial_handle);
             serial_handle = INVALID_HANDLE_VALUE;
         }
