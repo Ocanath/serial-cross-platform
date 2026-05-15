@@ -53,7 +53,7 @@ elseif(PLATFORM_MACOS)
     target_link_libraries(serial PRIVATE pthread)
 endif()
 
-target_link_libraries(serial PRIVATE bytestream)
+target_link_libraries(serial PUBLIC bytestream)
 
 # Include directories
 target_include_directories(serial
